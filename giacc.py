@@ -2,7 +2,11 @@
 # |D|A| |S|P|U|D| |L|O|R|D|
 # +-+-+ +-+-+-+-+ +-+-+-+-+
 
+# TODO:
+# -release tag
+
 from collections import namedtuple
+import enum
 from enum import Enum
 import mmap
 import os
@@ -15,38 +19,54 @@ def error(msg):
     print("ERROR:", msg)
     sys.exit(1)
 
-def bad_argv(msg):
+def bad_argv(msg, op = None):
     print("INVALID ARGUMENTS:", msg, file = sys.stderr)
     
     print(file = sys.stderr)
-    print_help(verbose = 0, dst = sys.stderr)
+    print_help(op, verbose = 0, dst = sys.stderr)
     sys.exit(2)
+
+def argc_clamp(expected):
+    if len(sys.argv) > expected:
+        bad_argv("Excessive/unknown arguments to \""
+            + sys.argv[1] + "\" operation (expected " + str(expected - 2) + ", found " + str(len(sys.argv) - 2) + ")",
+            operation)
 
 def error_file_invalid(path):
     error("Input file is not a valid GIA file: \"" + path + "\"")
 
-def print_help(verbose = 1, dst = None):
+def print_help(op = None, verbose = 1, dst = None):
     print("Usage:", file = dst)
     
-    print("> giacc.py to-classic [input filename] [output filename]", file = dst)
-    print("> giacc.py to-beyond [input filename] [output filename]", file = dst)
-    if verbose > 0:
-        print("\tConverts the GIA file at the [input filename] to Classic Mode or Beyond Mode, respectively,",
-            "and writes the converted file to [output filename].",
-            "No changes are made if the input file is already configured for the target mode.",
-            "If the output file already exists, it is overwritten without warning.",
-            "If [output filename] is a single asterisk (\"*\"), the converted file is written back to the input file, overwriting the prior contents.",
-            file = dst)
+    if op == None or op == "to-classic" or op == "to-beyond":
+        print("> giacc.py to-classic [input filename] [output filename]", file = dst)
+        print("> giacc.py to-beyond [input filename] [output filename]", file = dst)
+        
+        if verbose > 0:
+            print("\tConverts the GIA file at the [input filename] to Classic Mode or Beyond Mode, respectively,",
+                "and writes the converted file to [output filename].",
+                "No changes are made if the input file is already configured for the target mode.",
+                "If the output file already exists, it is overwritten without warning.",
+                "If [output filename] is a single asterisk (\"*\"),",
+                "the converted file is written back to the input file, overwriting the prior contents.",
+                file = dst)
     
-    print("> giacc.py query [filename]", file = dst)
-    if verbose > 0:
-        print("\tTests whether the [filename] denotes a Classic Mode asset file or Beyond Mode asset file.",
-            "No conversion is performed and the file is not modified.",
-            file = dst)
+    if op == None or op == "query":
+        print("> giacc.py query [filename]", file = dst)
+        
+        if verbose > 0:
+            print("\tTests whether the [filename] denotes a Classic Mode asset file or Beyond Mode asset file.",
+                "No conversion is performed and the file is not modified.",
+                file = dst)
     
-    print("> giacc.py help", file = dst)
-    if verbose > 0:
-        print("\tDisplays this usage message.", file = dst)
+    if op == None or op == "help":
+        print("> giacc.py help", file = dst)
+        #print("> giacc.py help [operation]", file = dst)
+        
+        if verbose > 0:
+            print("\tDisplays this usage message.",
+                "If [operation] is given, displays the usage message just for the given operation.",
+                file = dst)
 
 
 
@@ -81,8 +101,9 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         bad_argv("Missing operation argument")
     
+    operation   = sys.argv[1].casefold()
     # Check operation
-    match sys.argv[1].casefold():
+    match operation:
         case "to-classic":
             to_type = AssetMode.CLASSIC
         case "to-beyond":
@@ -90,7 +111,13 @@ if __name__ == "__main__":
         case "query":
             to_type = None  # No conversion
         case "help":
-            print_help()
+            argc_clamp(2)
+            
+            #if len(sys.argv) >= 3:
+            #    print_help(sys.argv[2].casefold())  # TODO: what if invalid operation?
+            #else:
+            print_help(None)
+            
             sys.exit()
         case _:
             bad_argv("Unknown or invalid operation \"" + sys.argv[1] + "\"");
@@ -99,9 +126,10 @@ if __name__ == "__main__":
     if to_type != None:
         if len(sys.argv) < 4:
             if len(sys.argv) < 3:
-                bad_argv("Missing input/output filename arguments")
+                bad_argv("Missing input/output filename arguments", operation)
             else:
-                bad_argv("Missing output filename argument")
+                bad_argv("Missing output filename argument", operation)
+        argc_clamp(4)
         
         src_path    = sys.argv[2]
         dst_path    = sys.argv[3]
@@ -111,7 +139,8 @@ if __name__ == "__main__":
             dst_path    = None
     else:
         if len(sys.argv) < 3:
-            bad_argv("Missing input filename argument")
+            bad_argv("Missing input filename argument", operation)
+        argc_clamp(3)
         
         src_path    = sys.argv[2]
         #dst_path    = None
@@ -244,3 +273,9 @@ if __name__ == "__main__":
     else:
         print("Conversion completed.")
         sys.exit()
+
+
+
+# +-+-+ +-+-+-+-+ +-+-+-+-+
+# |D|A| |S|P|U|D| |L|O|R|D|
+# +-+-+ +-+-+-+-+ +-+-+-+-+
