@@ -343,48 +343,44 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         bad_argv("Missing operation argument")
     
-    op_name   = sys.argv[1].casefold()
+    op_name = sys.argv[1].casefold()
     op_argv = sys.argv[2 : ]
     op_argc = len(op_argv)
     
-    for op in Operations:
-        # get list of forms from this operation with matching name
-        forms   = [f for f in op.forms() if f.name() == op_name]
-        
-        if len(forms) == 0:
-            # no matching forms - continue to next operation
-            continue
-        
-        # find the form with the right number of parameters
-        for f in forms:
-            if len(f.parameters()) == op_argc:
-                f(op_name, *op_argv)
-                break
-        else:
-            # wrong number of parameters passed - generate error message
-            if all(op_argc < len(f.parameters()) for f in forms):
-                label   = "Too few"
-            elif all(op_argc > len(f.parameters()) for f in forms):
-                label   = "Too many"
-            else:
-                label   = "Incorrect number of"
-            
-            if len(forms) == 1:
-                expected    = len(forms[0].parameters())
-            else:
-                if len(forms) > 2:
-                    oxford  = ","
-                else:
-                    oxford  = ""
-                
-                expected    = ", ".join(str(len(f.parameters())) for f in forms[: -1])
-                expected    = f"{expected}{oxford} or {len(forms[-1].parameters())}"
-            
-            bad_argv(f"{label} arguments (received {op_argc}, expected {expected})", op_name)
-        
-        break
-    else:
+    # get list of forms with matching name
+    forms   = [f for op in Operations for f in op.forms() if f.name() == op_name]
+    
+    if len(forms) == 0:
+        # no matching forms
         bad_argv(f"Unknown operation \"{sys.argv[1]}\"")
+    
+    # find the form with the right number of parameters
+    for f in forms:
+        if len(f.parameters()) == op_argc:
+            f(op_name, *op_argv)
+            break
+        
+    else:
+        # wrong number of parameters passed - generate error message
+        if all(op_argc < len(f.parameters()) for f in forms):
+            label   = "Too few"
+        elif all(op_argc > len(f.parameters()) for f in forms):
+            label   = "Too many"
+        else:
+            label   = "Incorrect number of"
+        
+        if len(forms) == 1:
+            expected    = len(forms[0].parameters())
+        else:
+            if len(forms) > 2:
+                oxford  = ","
+            else:
+                oxford  = ""
+            
+            expected    = ", ".join(str(len(f.parameters())) for f in forms[: -1])
+            expected    = f"{expected}{oxford} or {len(forms[-1].parameters())}"
+        
+        bad_argv(f"{label} arguments (received {op_argc}, expected {expected})", op_name)
 
 
 
