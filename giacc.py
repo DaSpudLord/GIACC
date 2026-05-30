@@ -77,7 +77,8 @@ class Footer(NamedTuple):
     magic_num   : int
 
 CLASSIC_MODE_TAG    = bytes.fromhex("20 01");
-FILENAME_TERMINATOR = bytes.fromhex("2A 05");
+FILENAME_TERMINATOR_PREFIX  = bytes.fromhex("2A")
+FILENAME_TERMINATORS    = [ bytes.fromhex("2A 05"), bytes.fromhex("2A 06") ]
 
 
 
@@ -120,9 +121,14 @@ def do_giacc_convert(src_path, to_mode, dst_path):
                 error_file_invalid(src_path)
             
             # Find index of filename terminator, searching backwards from footer
-            fterm_index  = src.rfind(FILENAME_TERMINATOR, 0, -Footer.Struct.size)
-            if fterm_index < 0:
-                error_file_invalid(src_path)
+            fterm_index = -Footer.Struct.size
+            while True:
+                fterm_index = src.rfind(FILENAME_TERMINATOR_PREFIX, 0, fterm_index)
+                if fterm_index < 0:
+                    error_file_invalid(src_path)
+                
+                if any( src[fterm_index : fterm_index + len(t)] == t for t in FILENAME_TERMINATORS ):
+                    break
             
             # Expected index of classic mode tag
             ctag_index   = fterm_index - len(CLASSIC_MODE_TAG)
